@@ -21,11 +21,21 @@ sorted([(x, sys.getsizeof(globals().get(x))) for x in dir() if not
     
     
     
- #enalbe local imports
+ #enable local imports
  
 import os, sys, inspect
 cmd_subfolder = os.path.realpath(os.path.abspath(os.path.join(os.path.split(inspect.getfile( inspect.currentframe() ))[0],"keras-deeplab-v3-plus")))
 if cmd_subfolder not in sys.path:
      sys.path.insert(0, cmd_subfolder)
+
+
+
+# easier imports 
+import sys
+sys.path.append('./keras-yolo3-master')
+
+
+
+#
 
 

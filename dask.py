@@ -1,9 +1,6 @@
 # dask bag
 
-from dask import bag, threaded
-from dask.diagnostics import ProgressBar
-ProgressBar().register()
-
+from dask import bag
 
 # get image dimensions
 def get_dims(file):
