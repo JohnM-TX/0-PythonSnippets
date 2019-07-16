@@ -1,0 +1,84 @@
+
+{
+	// This file contains snippets in the VS Code format. You can paste them into the python.json file as part of user snippets.
+	// Each snippet is defined under a snippet name and has a prefix, body and 
+	// description. The prefix is what is used to trigger the snippet and the body will be expanded and inserted. 
+	// Possible variables are:
+	// $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders. 
+	// Placeholders with the same ids are connected.
+	// Example:
+	// "Print to console": {
+	// 	"prefix": "log",
+	// 	"body": [
+	// 		"console.log('$1');",
+	// 		"$2"
+	// 	],
+	// 	"description": "Log output to console"
+	// }
+
+	"Imports": {
+		"prefix": "import_usefuls",
+		"body": [
+			"import os",
+			"import sys",
+			"from glob import glob",
+			"import numpy as np",
+			"import pandas as pd",
+			"pd.set_option('display.max_rows', 300)",
+			"pd.set_option('max_colwidth', 300)",
+			"from tqdm import tqdm",
+			"import hvplot.pandas",
+			],
+		"description": "Import useful packages"
+		},
+
+
+	"Pandas loader": {
+		"prefix": "train_test_load",
+		"body": [
+			"${1|train,test|} = pd.read_csv('./input/${2|train,test|}.csv",
+			],
+		"description": "Import useful packages"
+		},
+
+
+
+	"Memory checker": {
+		"prefix": "memory_usage",
+		"body": [
+			"import sys",
+			"ipython_vars = ['In', 'Out', 'exit', 'quit', 'get_ipython', 'ipython_vars']",
+			"sorted([(x, sys.getsizeof(globals().get(x))) for x in dir() if not",
+			"    x.startswith('_') and x not in sys.modules and x",
+			"    not in ipython_vars], key=lambda x: x[1], reverse=True)",
+			],
+		"description": "Get memory usage for variables"
+	    },
+
+
+    "Dask bag": {
+		"prefix": "dask_bag",
+		"body": [
+			"from dask import bag, diagnostics",
+			"${1:dimsbag} = bag.from_sequence(${2:dimslist}).map(${0:get_dims_function})",
+			"with diagnostics.ProgressBar():",
+			"    dims = dimsbag.compute()",
+            ],
+        "description": "Parallelize function with dask bag"
+        },
+
+// Requires dfmaxreduce.py and blank __init__.py in source directory
+    "Memory Reducer": {
+        "prefix": "maxreduce",
+        "body": [
+            "# Requires dfmaxreduce.py and blank__init__.py in sys.path dir",
+            "sys.path.append(${1:'D:/Dropbox (Personal)/Kaggles/molecules/}code/utils')",
+            "from dfmaxreduce import Maxreducer",
+            "reducer=Maxreducer()",
+            "${2:traintest} = reducer.reduce(${0:traintest}, verbose=True)",
+        ],
+        "description": "Reduce memory footprint for pandas dataframes"
+        },
+
+
+    }

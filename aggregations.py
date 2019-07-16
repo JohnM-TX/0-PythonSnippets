@@ -1,3 +1,6 @@
+
+# using dictionary
+
 num_aggregations = {
             'AMT_ANNUITY': [ 'max', 'mean'],
             'AMT_APPLICATION': ['min', 'mean'],
@@ -18,3 +21,15 @@ cat_aggregations = {}
 prev_agg = prev.groupby('SK_ID_CURR').agg({**num_aggregations, **cat_aggregations})
 
 prev_agg.columns = pd.Index(['PREV_' + e[0] + "_" + e[1].upper() for e in prev_agg.columns.tolist()])
+
+
+
+# back to original dataframe
+
+df_tab_samp['acc_min'] = df_tab_samp.groupby('ticketNumber')['acc_temp'].transform('min')
+
+
+
+# getting unique values in another column
+
+.agg('nunique')
