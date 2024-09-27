@@ -1,150 +1,225 @@
-
-#%%
-import pandas as pd
-import numpy as np
-import os
-from sklearn.metrics import roc_auc_score
-from sklearn.preprocessing import minmax_scale
-
-import os 
-from glob import glob
-
-#%%
-"""
-Initializes an empty ensemble
-"""
-def init_hillclimb():
-    best_ensemble = {}
-    for label in LABELS:
-        best_ensemble[label] = []
-    best_score = {}
-    for label in LABELS:
-        best_score[label] = 0
-    
-    return best_ensemble, best_score
-
-"""
-Scores average AUC for an ensemble per label
-"""
-def score_ensemble(ensemble, label):
-    blend_preds = np.zeros(len(train))
-    
-    for model in ensemble:
-        blend_preds += minmax_scale(files[model][label])
-        
-    blend_preds = blend_preds/len(filenames)
-    score = roc_auc_score(train[label], blend_preds)
-    
-    return score
-
-"""
-Finds the optimal model to add next to an ensemble
-"""
-def find_best_improvement(ensemble, label):
-    best_score = 0
-    best_ensemble = []
-    
-    for i in range(0,len(files)):
-        ensemble = ensemble + [i]
-
-        score = score_ensemble(ensemble, label)
-        
-        if score > best_score:
-            best_score  = score
-            best_ensemble = ensemble
-            
-        ensemble = ensemble[:-1]
-    
-    return best_ensemble, best_score
-        
-"""
-Performs a step for each label
-"""
-def climb(best_ensemble, best_score):
-    for label in LABELS:        
-        best_ensemble[label], best_score[label] = find_best_improvement(best_ensemble[label], label)
-        
-    return best_ensemble, best_score
-
-"""
-Gets optimal blending weights after hillclimb
-"""
-def get_optimal_weights(best_ensemble):
-    weights = {}
-    for label in LABELS:
-        weights[label] = {}
-        for num in set(best_ensemble[label]):
-            weights[label][num] = best_ensemble[label].count(num)/len(best_ensemble[label])
-    return weights
-
-
-#%%
-"""
-Constructs a pandas dataframe using the optimal blending weights
-"""
-def get_optimal_blend(optimal_weights):
-    sub = pd.read_csv(os.path.join(os.pardir, "subs", "sample_submission.csv"))
-    blend = sub.copy()
-    for label in LABELS:
-        print(label)
-        for key in optimal_weights[label]:
-            blend[label] += optimal_weights[label][key] * \
-                minmax_scale(get_sub_file(key)[label])
-            print(optimal_weights[label][key], filenames[key])
-            blend[label] = minmax_scale(blend[label])
-        
-    return blend
-
-def get_sub_file(num):
-    filenames = glob('test*.csv')
-    filenames = sorted(filenames)
-    filename = filenames[num]
-    return pd.read_csv(os.path.join(SUB_PATH, filename))
-
-#%%
-
-DATA_PATH = "../input/"
-SUB_PATH = "./"
-
-train = pd.read_csv(os.path.join(DATA_PATH, "train.csv")).fillna(' ')
-test = pd.read_csv(os.path.join(DATA_PATH, "test.csv")).fillna(' ')
-
-LABELS = train.columns[2:]
-
-
-#%%
-# Get submissions and out-of-fold predictions
-filenames = glob('preds*.csv')
-filenames = sorted(filenames)
-
-files = [pd.read_csv(filename) 
-    for filename in filenames]
-
-
-#%%
-
-best_ensemble, best_score = init_hillclimb()
-
-# Run hillclimb
-for i in range(100):
-    print("-------------")
-    print("Step", i)    
-    best_ensemble, best_score = climb(best_ensemble, best_score)
-    print("Best ensemble:")
-    print(best_ensemble)
-    print("Best score:")
-    print(best_score)
-    print("AUC:", np.mean([best_score[label] for label in LABELS]))
-
-# Get optimal weights
-opt_w = get_optimal_weights(best_ensemble)
-print("Optimal weights:")
-print(opt_w)
-
-
-#%%
-# Construct the blend
-blend = get_optimal_blend(opt_w)
-
-# Submit
-blend.to_csv("hillclimb.csv", index=False)
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "e380f506",
+   "metadata": {
+    "_cell_guid": "fb421058-8087-4fe7-a93d-319cad601ad4",
+    "_uuid": "d4ad11ec-9c81-4614-801e-c5bc7868241b",
+    "collapsed": false,
+    "execution": {
+     "iopub.execute_input": "2024-09-27T04:11:14.596317Z",
+     "iopub.status.busy": "2024-09-27T04:11:14.595947Z",
+     "iopub.status.idle": "2024-09-27T04:11:16.522470Z",
+     "shell.execute_reply": "2024-09-27T04:11:16.521581Z"
+    },
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "papermill": {
+     "duration": 1.931977,
+     "end_time": "2024-09-27T04:11:16.524726",
+     "exception": false,
+     "start_time": "2024-09-27T04:11:14.592749",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "\n",
+    "#%%\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import os\n",
+    "from sklearn.metrics import roc_auc_score\n",
+    "from sklearn.preprocessing import minmax_scale\n",
+    "\n",
+    "import os \n",
+    "from glob import glob\n",
+    "\n",
+    "#%%\n",
+    "\"\"\"\n",
+    "Initializes an empty ensemble\n",
+    "\"\"\"\n",
+    "def init_hillclimb():\n",
+    "    best_ensemble = {}\n",
+    "    for label in LABELS:\n",
+    "        best_ensemble[label] = []\n",
+    "    best_score = {}\n",
+    "    for label in LABELS:\n",
+    "        best_score[label] = 0\n",
+    "    \n",
+    "    return best_ensemble, best_score\n",
+    "\n",
+    "\"\"\"\n",
+    "Scores average AUC for an ensemble per label\n",
+    "\"\"\"\n",
+    "def score_ensemble(ensemble, label):\n",
+    "    blend_preds = np.zeros(len(train))\n",
+    "    \n",
+    "    for model in ensemble:\n",
+    "        blend_preds += minmax_scale(files[model][label])\n",
+    "        \n",
+    "    blend_preds = blend_preds/len(filenames)\n",
+    "    score = roc_auc_score(train[label], blend_preds)\n",
+    "    \n",
+    "    return score\n",
+    "\n",
+    "\"\"\"\n",
+    "Finds the optimal model to add next to an ensemble\n",
+    "\"\"\"\n",
+    "def find_best_improvement(ensemble, label):\n",
+    "    best_score = 0\n",
+    "    best_ensemble = []\n",
+    "    \n",
+    "    for i in range(0,len(files)):\n",
+    "        ensemble = ensemble + [i]\n",
+    "\n",
+    "        score = score_ensemble(ensemble, label)\n",
+    "        \n",
+    "        if score > best_score:\n",
+    "            best_score  = score\n",
+    "            best_ensemble = ensemble\n",
+    "            \n",
+    "        ensemble = ensemble[:-1]\n",
+    "    \n",
+    "    return best_ensemble, best_score\n",
+    "        \n",
+    "\"\"\"\n",
+    "Performs a step for each label\n",
+    "\"\"\"\n",
+    "def climb(best_ensemble, best_score):\n",
+    "    for label in LABELS:        \n",
+    "        best_ensemble[label], best_score[label] = find_best_improvement(best_ensemble[label], label)\n",
+    "        \n",
+    "    return best_ensemble, best_score\n",
+    "\n",
+    "\"\"\"\n",
+    "Gets optimal blending weights after hillclimb\n",
+    "\"\"\"\n",
+    "def get_optimal_weights(best_ensemble):\n",
+    "    weights = {}\n",
+    "    for label in LABELS:\n",
+    "        weights[label] = {}\n",
+    "        for num in set(best_ensemble[label]):\n",
+    "            weights[label][num] = best_ensemble[label].count(num)/len(best_ensemble[label])\n",
+    "    return weights\n",
+    "\n",
+    "\n",
+    "#%%\n",
+    "\"\"\"\n",
+    "Constructs a pandas dataframe using the optimal blending weights\n",
+    "\"\"\"\n",
+    "def get_optimal_blend(optimal_weights):\n",
+    "    sub = pd.read_csv(os.path.join(os.pardir, \"subs\", \"sample_submission.csv\"))\n",
+    "    blend = sub.copy()\n",
+    "    for label in LABELS:\n",
+    "        print(label)\n",
+    "        for key in optimal_weights[label]:\n",
+    "            blend[label] += optimal_weights[label][key] * \\\n",
+    "                minmax_scale(get_sub_file(key)[label])\n",
+    "            print(optimal_weights[label][key], filenames[key])\n",
+    "            blend[label] = minmax_scale(blend[label])\n",
+    "        \n",
+    "    return blend\n",
+    "\n",
+    "def get_sub_file(num):\n",
+    "    filenames = glob('test*.csv')\n",
+    "    filenames = sorted(filenames)\n",
+    "    filename = filenames[num]\n",
+    "    return pd.read_csv(os.path.join(SUB_PATH, filename))\n",
+    "\n",
+    "#%%\n",
+    "\n",
+    "DATA_PATH = \"../input/\"\n",
+    "SUB_PATH = \"./\"\n",
+    "\n",
+    "# train = pd.read_csv(os.path.join(DATA_PATH, \"train.csv\")).fillna(' ')\n",
+    "# test = pd.read_csv(os.path.join(DATA_PATH, \"test.csv\")).fillna(' ')\n",
+    "\n",
+    "# LABELS = train.columns[2:]\n",
+    "\n",
+    "\n",
+    "# #%%\n",
+    "# # Get submissions and out-of-fold predictions\n",
+    "# filenames = glob('preds*.csv')\n",
+    "# filenames = sorted(filenames)\n",
+    "\n",
+    "# files = [pd.read_csv(filename) \n",
+    "#     for filename in filenames]\n",
+    "\n",
+    "\n",
+    "# #%%\n",
+    "\n",
+    "# best_ensemble, best_score = init_hillclimb()\n",
+    "\n",
+    "# # Run hillclimb\n",
+    "# for i in range(100):\n",
+    "#     print(\"-------------\")\n",
+    "#     print(\"Step\", i)    \n",
+    "#     best_ensemble, best_score = climb(best_ensemble, best_score)\n",
+    "#     print(\"Best ensemble:\")\n",
+    "#     print(best_ensemble)\n",
+    "#     print(\"Best score:\")\n",
+    "#     print(best_score)\n",
+    "#     print(\"AUC:\", np.mean([best_score[label] for label in LABELS]))\n",
+    "\n",
+    "# # Get optimal weights\n",
+    "# opt_w = get_optimal_weights(best_ensemble)\n",
+    "# print(\"Optimal weights:\")\n",
+    "# print(opt_w)\n",
+    "\n",
+    "\n",
+    "# #%%\n",
+    "# # Construct the blend\n",
+    "# blend = get_optimal_blend(opt_w)\n",
+    "\n",
+    "# # Submit\n",
+    "# blend.to_csv(\"hillclimb.csv\", index=False)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [],
+   "isGpuEnabled": false,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.14"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 4.959629,
+   "end_time": "2024-09-27T04:11:16.944730",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2024-09-27T04:11:11.985101",
+   "version": "2.6.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
